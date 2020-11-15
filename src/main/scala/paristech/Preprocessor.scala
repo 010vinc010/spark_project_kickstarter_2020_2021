@@ -138,6 +138,37 @@ object Preprocessor {
       .withColumn("currency2", when($"country".isNotNull && length($"currency") =!= 3, null).otherwise($"currency"))
       .drop("country", "currency")
 
+    //Changement des valeurs de final_status différentes de 1 par 0
+    def formatStatus(status: Integer): Integer = {
+      if (status != 1)
+        0
+      else
+        1
+    }
+    val formatStatusUdf = udf(formatStatus _)
+
+    val dfFinalStatus: DataFrame = dfNoFutur
+      .withColumn("final_status", formatStatusUdf($"final_status"))
+    dfFinalStatus
+      //.withColumn("final_status", formatStatusUdf($"final_status"))
+      .groupBy("final_status")
+      .count.orderBy($"count".desc)
+      .show(50)
+
+    //Ajout de la colonne de durée de campagne et de la colonne des heures de préparation
+    val dfAddColumns: DataFrame = dfFinalStatus
+      .withColumn("days_campaign",round(($"deadline" - $"launched_at")/(3600*24)).cast("Int"))
+      .withColumn("hours_prepa",round(($"launched_at" - $"created_at")/3600).cast("Int"))
+      .drop("deadline", "launched_at", "created_at")
+    dfAddColumns.show(50)
+
+    //Concaténation des colonne texte
+    val dfConcatText: DataFrame = dfAddColumns
+      .withColumn("text",concat(lower($"name"), lit(" "), lower($"desc"), lit(" "), lower($"keywords")))
+    dfConcatText.show(50)
+
+
+
     println("\n")
     println("Hello World ! from Preprocessor")
     println("\n")
