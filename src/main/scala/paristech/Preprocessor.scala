@@ -147,10 +147,9 @@ object Preprocessor {
     }
     val formatStatusUdf = udf(formatStatus _)
 
-    val dfFinalStatus: DataFrame = dfNoFutur
+    val dfFinalStatus: DataFrame = dfCountry
       .withColumn("final_status", formatStatusUdf($"final_status"))
     dfFinalStatus
-      //.withColumn("final_status", formatStatusUdf($"final_status"))
       .groupBy("final_status")
       .count.orderBy($"count".desc)
       .show(50)
@@ -167,10 +166,13 @@ object Preprocessor {
       .withColumn("text",concat(lower($"name"), lit(" "), lower($"desc"), lit(" "), lower($"keywords")))
     dfConcatText.show(50)
 
+    //remplacement des valeurs nulles
+    val monDataFrameFinal: DataFrame = dfConcatText
+      .na.fill(-1, Seq("days_campaign", "hours_prepa", "goal"))
+      .na.fill("unknown", Seq("country2", "currency2", "text"))
+    monDataFrameFinal
+      .show(50)
 
-
-    println("\n")
-    println("Hello World ! from Preprocessor")
-    println("\n")
+    monDataFrameFinal.write.parquet("/Users/vince/Documents/Scolarité/Cours_Telecom_Paris/INF729-Hadoop_Spark/TP/cours-spark-telecom/data/training_set_perso")
   }
 }
